@@ -21,6 +21,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -82,6 +83,14 @@ public class RendererSetting {
                 quaternion.rotateY((float) Math.toRadians(-c.getYRot()));
                 return quaternion;
             }),
+            LookAtDirection((p, c, t) -> getParticleLookAtDirection(p, p.getRealVelocity().normalize(), c)),
+            Beam((p, c, t) -> {
+                Quaternionf rotation = p.getEmitter().transform().rotation();
+
+                Vector3f yAxis = new Vector3f(0, 1, 0); // 初始向上的向量
+                rotation.transform(yAxis); // 旋转后的 yAxis
+                return getParticleLookAtDirection(p, yAxis, c);
+            }),
             Model((p, c, t) -> new Quaternionf());
 
             public final TriFunction<TileParticle, Camera, Float, Quaternionf> quaternion;
@@ -100,6 +109,32 @@ public class RendererSetting {
                 quaternion.rotateX((float) Math.toRadians(xRot));
                 this.quaternion = (p, c, t) -> quaternion;
             }
+
+            private static Quaternionf getParticleLookAtDirection(TileParticle particle, Vector3f yAxis, Camera camera) {
+                // 获取相机到粒子的方向（粒子到相机方向的负方向）
+                Vector3f cameraToParticle = new Vector3f(particle.getLocalPos()).sub(camera.getPosition().toVector3f()).normalize();
+
+                // 计算X轴：Y轴和相机方向的叉积
+                Vector3f xAxis = new Vector3f();
+                yAxis.cross(cameraToParticle, xAxis).normalize();
+
+                // 如果Y轴和相机方向几乎平行，使用默认朝向
+                if (xAxis.length() < 1e-6f) {
+                    return new Quaternionf(); // 返回单位四元数
+                }
+
+                // 重新计算Z轴：X轴和Y轴的叉积（确保正交）
+                Vector3f zAxis = new Vector3f();
+                xAxis.cross(yAxis, zAxis).normalize();
+
+                // 从这三个轴构建旋转矩阵，然后转换为四元数
+                Matrix3f rotationMatrix = new Matrix3f();
+                rotationMatrix.setColumn(0, xAxis);
+                rotationMatrix.setColumn(1, yAxis);
+                rotationMatrix.setColumn(2, zAxis);
+
+                return new Quaternionf().setFromNormalized(rotationMatrix);
+            }
         }
 
         @Persisted
@@ -117,6 +152,9 @@ public class RendererSetting {
                     false, this::getRenderMode, this::setRenderMode, Mode.Billboard, true,
                     Arrays.stream(Mode.values()).toList(), Mode::name, (mode, container) -> {
                 if (mode == Mode.Model) {
+                    if (model == null) {
+                        model = new IModelRenderer(new ResourceLocation("block/dirt"));
+                    }
                     model.buildConfigurator(container);
                     var shadeConfigurator = new BooleanConfigurator("shade", this::isShade, this::setShade, true, true);
                     shadeConfigurator.setTips("photon.emitter.config.renderer.renderMode.model.shade");

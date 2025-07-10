@@ -69,6 +69,11 @@ public class ParticleConfig implements IPersistedSerializable {
     protected NumberFunction3 startRotation = new NumberFunction3(0, 0, 0);
     @Setter
     @Getter
+    @Configurable(tips = "photon.emitter.config.pivotPoint")
+    @NumberFunction3Config(affectX = false, affectY = false, common = @NumberFunctionConfig(types = {Constant.class, RandomConstant.class, Curve.class, RandomCurve.class}, curveConfig = @CurveConfig(bound = {0, 360}, xAxis = "duration", yAxis = "pivot")))
+    protected NumberFunction3 pivotPoint = new NumberFunction3(0, 0, 0);
+    @Setter
+    @Getter
     @Configurable(tips = "photon.emitter.config.startColor")
     @NumberFunctionConfig(types = {Color.class, RandomColor.class, Gradient.class, RandomGradient.class}, defaultValue = -1)
     protected NumberFunction startColor = NumberFunction.color(-1);

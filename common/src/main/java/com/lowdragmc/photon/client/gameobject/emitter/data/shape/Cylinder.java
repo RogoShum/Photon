@@ -41,7 +41,7 @@ public class Cylinder implements IShape {
         var theta = arc * Mth.TWO_PI * random.nextDouble() / 360;
 
         var pos = new Vector3f((float) (r * Math.cos(theta)),
-                random.nextFloat() * scale.y - scale.y / 2,
+                random.nextFloat() - 0.5f,
                 (float) (r * Math.sin(theta))).mul(scale);
 
         particle.setLocalPos(Vector3fHelper.rotateYXY(new Vector3f(pos), rotation).add(position).add(particle.getLocalPos()), true);

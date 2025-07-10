@@ -581,6 +581,7 @@ u     */
     }
 
     public void renderInternal(@Nonnull VertexConsumer buffer, Camera camera, float partialTicks) {
+        var pivot = config.getPivotPoint().get(randomSource, emitter.getT());
         var vec3 = camera.getPosition();
 
         var localPos = getLocalPos(partialTicks).mulPosition(getSpaceTransform());
@@ -638,12 +639,19 @@ u     */
                     new Vector3f(1.0F, 1.0F, 0.0F),
                     new Vector3f(1.0F, -1.0F, 0.0F)};
 
+            Matrix4f transform = new Matrix4f();
+            transform.rotate(quaternion);
+            transform.scale(size);
+            transform.scale(getSpaceScale());
+            transform.translate(pivot.x, pivot.y, 0);
+            transform.m30(transform.m30() + x);
+            transform.m31(transform.m31() + y);
+            transform.m32(transform.m32() + z);
+
             for (var i = 0; i < 4; ++i) {
                 var vertex = rawVertexes[i];
-                vertex.mul(size.x, size.y, size.z);
-                vertex = quaternion.transform(vertex);
-                vertex.mul(getSpaceScale());
-                vertex.add(x, y, z);
+                Vector4f result = transform.transform(new Vector4f(vertex.x, vertex.y, vertex.z, 1.0f));
+                vertex.set(result.x, result.y, result.z);
             }
 
             var uvs = getRealUVs(partialTicks);
